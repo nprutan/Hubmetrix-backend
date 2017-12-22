@@ -1,0 +1,10 @@
+{
+    "dev": {
+        "app_function": "hubmetrix_metrics.app",
+        "aws_region": "us-west-1",
+        "profile_name": "default",
+        "project_name": "hubmetrix-backend",
+        "runtime": "python3.6",
+        "s3_bucket": "zappa-dlguvnh9p"
+    }
+}

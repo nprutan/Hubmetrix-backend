@@ -11,15 +11,17 @@ def _get_date_index(itrable):
     return pd.to_datetime(itrable)
 
 
-def _get_dataframe(itrable, columns, idx=None):
-    return pd.DataFrame(data=itrable, index=idx, columns=columns)
-
-def compute_metrics(order_iter):
-    dates = _extract_dates(order_iter, 'date_created')
+def _get_dataframe(itrable):
+    dates = _extract_dates(itrable, 'date_created')
     idx = _get_date_index(dates)
     cols = ['date_created', 'status', 'total_inc_tax']
 
-    df = _get_dataframe(order_iter, cols, idx)
+    return pd.DataFrame(data=itrable, index=idx, columns=cols)
+
+def compute_metrics(order_iter):
+    df = _get_dataframe(order_iter)
+
+
 
     return df
 

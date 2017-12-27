@@ -1,5 +1,4 @@
 import pandas as pd
-from pandas import Series
 import maya
 from maya import MayaDT
 import math

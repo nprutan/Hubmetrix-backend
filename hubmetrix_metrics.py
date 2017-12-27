@@ -1,7 +1,7 @@
 from bigcommerce.api import BigcommerceApi
 from flask import Flask, request
 from dynamodb_utils import *
-from metrics_computation import compute_metrics
+from metrics_computation import *
 import os
 import base64
 import json
@@ -21,6 +21,8 @@ app.secret_key = app.config['SESSION_SECRET']
 
 
 bc_client = None
+bc_app_user = None
+bc_store_hash = None
 
 
 @app.route('/')
@@ -36,10 +38,9 @@ def bc_ingest_customers():
 @app.route('/bc-ingest-orders', methods=["POST"])
 def bc_ingest_orders():
     data = json.loads(base64.b64decode(request.get_json(force=True)))
-
     orders = get_all_customer_orders(data, order_list=[])
 
-    computed = compute_metrics(orders)
+    computed = compute_metrics(orders, bc_store_hash)
 
     if computed:
         return 200
@@ -73,6 +74,7 @@ def get_hs_redir_uri():
 
 def get_bc_client(data):
     global bc_client
+    global bc_store_hash
     if not bc_client:
         bc_store_hash = data['producer'].split('/')[1]
         user = get_query_first_result(AppUser, bc_store_hash)

@@ -25,11 +25,12 @@ def _get_dataframe(itrable):
 
     return df
 
-def compute_metrics(order_iter, store_hash):
+def compute_metrics(order_iter, app_user):
     df = _get_dataframe(order_iter)
-    metrics = Metrics(store_hash)
+    sum_col = 'total_inc_tax'
+    metrics = Metrics(app_user.hub_id, app_user.email, dataframe=df, sum_column=sum_col)
 
-    return df
+    return metrics
 
 
 class Metrics(object):

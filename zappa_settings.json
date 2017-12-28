@@ -5,6 +5,8 @@
         "profile_name": "default",
         "project_name": "hubmetrix-backend",
         "runtime": "python3.6",
-        "s3_bucket": "zappa-dlguvnh9p"
+        "s3_bucket": "zappa-ma4c3lx7g",
+	"use_precompiled_packages": true,
+	"slim_handler": true
     }
 }

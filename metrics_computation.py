@@ -1,9 +1,7 @@
 import pandas as pd
-import maya
-from maya import MayaDT
+import pendulum
 import math
 
-__all__ = ['Metrics', 'compute_metrics']
 
 def _extract_dates(itrable, date_column):
     return [item[date_column] for item in itrable]
@@ -24,10 +22,11 @@ def _get_dataframe(itrable):
 
     return df
 
+
 def compute_metrics(order_iter, app_user):
     df = _get_dataframe(order_iter)
     sum_col = 'total_inc_tax'
-    metrics = Metrics(app_user.hub_id, app_user.email, dataframe=df, sum_column=sum_col)
+    metrics = Metrics(app_user.hs_hub_id, app_user.bc_email, dataframe=df, sum_column=sum_col)
 
     return metrics
 
@@ -40,8 +39,9 @@ class Metrics(object):
     def __init__(self, hub_id, email, dataframe, sum_column=None):
         self.hub_id = hub_id
         self.email = email
-        self.now = maya.now()
+        self.now = pendulum.now()
         self.dataframe = dataframe
+        self.sum_column = sum_column
         self.this_month = '{}-{}'.format(self.now.year, self.now.month)
         self.last_month = '{}-{}'.format(self.now.year, self.now.subtract(months=1).month)
         self.this_year = '{}'.format(self.now.year)
@@ -59,7 +59,7 @@ class Metrics(object):
 
     @property
     def latest_order_date(self):
-        return MayaDT.from_datetime(self.dataframe.index[-1]).iso8601()
+        return str(pendulum.parse(str(self.dataframe.index[-1].to_pydatetime())))
 
     @property
     def latest_order_id(self):
@@ -176,10 +176,18 @@ class Metrics(object):
         return 0
 
     def __iter__(self):
-        return iter(self.__dict__.items())
+        return iter([{value: self[value]} for value in self.__dir__()])
+
+    def __dir__(self):
+        return ['latest_order_date', 'latest_order_id', 'latest_order_status',
+                'monthly', 'monthly_previous', 'monthly_change', 'monthly_count',
+                'monthly_count_previous', 'monthly_count_change', 'yearly', 'yearly_previous',
+                'yearly_change', 'yearly_count', 'yearly_count_previous', 'yearly_count_change',
+                'all_time_total', 'all_time_total_count', ]
 
     def __getitem__(self, item):
-        return self.__dict__[item]
+        return self.__getattribute__(item)
 
     def __repr__(self):
-        return 'Metrics({!r})'.format(self.__dict__)
+        return ('Metrics({!r}, {!r}, dataframe_id: {}, {!r})'.format(self.hub_id, self.email, id(self.dataframe),
+                                                                                                self.sum_column))

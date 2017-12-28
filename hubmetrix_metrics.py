@@ -19,6 +19,31 @@ app.config['HS_CLIENT_SECRET'] = '74c80cfa-9bed-4770-8e31-a581df04a181'
 app.secret_key = app.config['SESSION_SECRET']
 
 
+def error_info(e):
+    content = ""
+    try:  # it's probably a HttpException, if you're using the bigcommerce client
+        content += str(e.headers) + "<br>" + str(e.content) + "<br>"
+        req = e.response.request
+        content += "<br>Request:<br>" + req.url + "<br>" + str(req.headers) + "<br>" + str(req.body)
+    except AttributeError as e:  # not a HttpException
+        content += "<br><br> (This page threw an exception: {})".format(str(e))
+    return content
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    content = "Internal Server Error: " + str(e) + "<br>"
+    content += error_info(e)
+    return content, 500
+
+
+@app.errorhandler(400)
+def bad_request(e):
+    content = "Bad Request: " + str(e) + "<br>"
+    content += error_info(e)
+    return content, 400
+
+
 @app.route('/')
 def index():
     return 'Welcome to the Hubmetrix metrics backend!'
@@ -26,46 +51,24 @@ def index():
 
 @app.route('/bc-ingest-customers', methods=["POST"])
 def bc_ingest_customers():
-    return 'request is: {}'.format(request.args)
+    return 'request data is: {}'.format(json.loads(request.data))
 
 
 @app.route('/bc-ingest-orders', methods=["POST"])
 def bc_ingest_orders():
-    data = json.loads(base64.b64decode(request.get_json(force=True)))
-    orders = get_all_customer_orders(data, order_list=[])
+    data = json.loads(request.data)
+    orders = get_all_customer_orders(data, app.config, order_list=[])
 
-    metrics = compute_metrics(orders, hm_app_user)
+    app_user = get_app_user(data)
+    metrics = compute_metrics(orders, app_user)
+    print('Monthly total: {}'.format(metrics.monthly))
 
-    if metrics:
-        return 200
-    return 500
+    return 'Ok'
 
 
 @app.route('/bc-ingest-shipments', methods=["POST"])
 def bc_ingest_shipments():
     return 'request is: {}'.format(request.args)
-
-@property
-def get_bc_client_id():
-    return app.config['BC_CLIENT_ID']
-
-
-def get_bc_client_secret():
-    return app.config['BC_CLIENT_SECRET']
-
-
-def get_hs_client_id():
-    return app.config['HS_CLIENT_ID']
-
-
-def get_hs_client_secret():
-    return app.config['HS_CLIENT_SECRET']
-
-
-def get_hs_redir_uri():
-    return app.config['HS_REDIRECT_URI']
-
-
 
 
 if __name__ == '__main__':

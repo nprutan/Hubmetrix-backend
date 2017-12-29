@@ -61,7 +61,8 @@ def bc_ingest_orders():
 
     app_user = get_app_user(data)
     metrics = compute_metrics(orders, app_user)
-    print('Monthly total: {}'.format(metrics.monthly))
+
+
 
     return 'Ok'
 

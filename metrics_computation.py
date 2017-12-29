@@ -59,6 +59,10 @@ class Metrics(object):
 
     @property
     def latest_order_date(self):
+        return pendulum.parse(str(self.dataframe.index[-1])).int_timestamp * 1000
+
+    @property
+    def latest_order_date_text(self):
         return str(pendulum.parse(str(self.dataframe.index[-1].to_pydatetime())))
 
     @property
@@ -70,21 +74,21 @@ class Metrics(object):
         return self.dataframe.status[-1]
 
     @property
-    def monthly(self):
+    def monthly_total(self):
         monthly = self.monthly_df_sum.get(self.this_month)
         if hasattr(monthly, 'item'):
             return monthly.item()
         return 0.0
 
     @property
-    def monthly_previous(self):
+    def last_month_total(self):
         monthly_previous = self.monthly_df_sum.get(self.last_month)
         if hasattr(monthly_previous, 'item'):
             return monthly_previous.item()
         return 0.0
 
     @property
-    def monthly_change(self):
+    def monthly_total_percent_change(self):
         monthly_change = self.monthly_df_sum_change.get(self.this_month)
         if hasattr(monthly_change, 'item'):
             change = monthly_change.item()
@@ -93,21 +97,21 @@ class Metrics(object):
         return 0
 
     @property
-    def monthly_count(self):
+    def monthly_order_count(self):
         count_monthly = self.monthly_df_count.get(self.this_month)
         if hasattr(count_monthly, 'item'):
             return count_monthly.item()
         return 0
 
     @property
-    def monthly_count_previous(self):
+    def last_month_order_count(self):
         count_monthly_previous = self.monthly_df_count.get(self.last_month)
         if hasattr(count_monthly_previous, 'item'):
             return count_monthly_previous.item()
         return 0
 
     @property
-    def monthly_count_change(self):
+    def last_month_order_count_percent_change(self):
         monthly_count_change = self.monthly_df_count_change.get(self.this_month)
         if hasattr(monthly_count_change, 'item'):
             change = monthly_count_change.item()
@@ -116,21 +120,21 @@ class Metrics(object):
         return 0
 
     @property
-    def yearly(self):
+    def yearly_total(self):
         yearly = self.yearly_df_sum.get(self.this_year)
         if hasattr(yearly, 'item'):
             return yearly.item()
         return 0.0
 
     @property
-    def yearly_previous(self):
+    def last_year_total(self):
         yearly_previous = self.yearly_df_sum.get(self.last_year)
         if hasattr(yearly_previous, 'item'):
             return yearly_previous.item()
         return 0.0
 
     @property
-    def yearly_change(self):
+    def yearly_percent_change(self):
         yearly_change = self.yearly_df_sum_change.get(self.this_year)
         if hasattr(yearly_change, 'item'):
             change = yearly_change.item()
@@ -139,21 +143,21 @@ class Metrics(object):
         return 0
 
     @property
-    def yearly_count(self):
+    def yearly_order_count(self):
         count_yearly = self.yearly_df_count.get(self.this_year)
         if hasattr(count_yearly, 'item'):
             return count_yearly.item()
         return 0
 
     @property
-    def yearly_count_previous(self):
+    def last_year_order_count(self):
         count_yearly_previous = self.yearly_df_count.get(self.last_year)
         if hasattr(count_yearly_previous, 'item'):
             return count_yearly_previous.item()
         return 0
 
     @property
-    def yearly_count_change(self):
+    def yearly_order_count_percent_change(self):
         yearly_count_change = self.yearly_df_count_change.get(self.this_year)
         if hasattr(yearly_count_change, 'item'):
             change = yearly_count_change.item()
@@ -162,14 +166,14 @@ class Metrics(object):
         return 0
 
     @property
-    def all_time_total(self):
+    def all_time_total_revenue(self):
         total = self.all_time_df_total
         if hasattr(total, 'item'):
             return round(total.item(), 2)
         return 0.0
 
     @property
-    def all_time_total_count(self):
+    def all_time_order_count(self):
         total_count = self.all_time_df_count
         if hasattr(total_count, 'item'):
             return total_count.item()
@@ -179,11 +183,12 @@ class Metrics(object):
         return iter([{value: self[value]} for value in self.__dir__()])
 
     def __dir__(self):
-        return ['latest_order_date', 'latest_order_id', 'latest_order_status',
-                'monthly', 'monthly_previous', 'monthly_change', 'monthly_count',
-                'monthly_count_previous', 'monthly_count_change', 'yearly', 'yearly_previous',
-                'yearly_change', 'yearly_count', 'yearly_count_previous', 'yearly_count_change',
-                'all_time_total', 'all_time_total_count', ]
+        return ['all_time_order_count', 'all_time_total_revenue', 'last_month_order_count',
+                'last_month_order_count_percent_change', 'last_month_total', 'last_year_order_count',
+                'last_year_total', 'latest_order_date', 'latest_order_date_text', 'latest_order_id',
+                'latest_order_status', 'monthly_order_count', 'monthly_total', 'monthly_total_percent_change',
+                'yearly_order_count', 'yearly_order_count_percent_change', 'yearly_percent_change',
+                'yearly_total']
 
     def __getitem__(self, item):
         return self.__getattribute__(item)

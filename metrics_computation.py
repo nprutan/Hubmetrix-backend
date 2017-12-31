@@ -23,10 +23,10 @@ def _get_dataframe(itrable):
     return df
 
 
-def compute_metrics(order_iter, app_user):
+def compute_metrics(order_iter, app_user, customer):
     df = _get_dataframe(order_iter)
     sum_col = 'total_inc_tax'
-    metrics = Metrics(app_user.hs_hub_id, app_user.bc_email, dataframe=df, sum_column=sum_col)
+    metrics = Metrics(app_user.hs_hub_id, customer.email, dataframe=df, sum_column=sum_col)
 
     return metrics
 
@@ -57,6 +57,7 @@ class Metrics(object):
         self.all_time_df_total = self.dataframe[sum_column].sum()
         self.all_time_df_count = self.dataframe[sum_column].count()
 
+    # TODO: Fix date type issue -- need datepicker
     @property
     def latest_order_date(self):
         return pendulum.parse(str(self.dataframe.index[-1])).int_timestamp * 1000

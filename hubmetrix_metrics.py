@@ -1,8 +1,8 @@
 from flask import Flask, request
 from metrics_computation import *
-from customer_utils import *
+from hubmetrix_backend_utils import *
+from hubspot_data import *
 import os
-import base64
 import json
 
 app = Flask(__name__)
@@ -51,25 +51,36 @@ def index():
 
 @app.route('/bc-ingest-customers', methods=["POST"])
 def bc_ingest_customers():
-    return 'request data is: {}'.format(json.loads(request.data))
+    with customer_manager(request.data, app.config) as ctx:
+        client, app_user, customer, customer_address = ctx
+
+        metrics_empty = compute_metrics([], app_user, customer)
+
+        with hubspot_manager(app_user, app.config, metrics_empty):
+            payload = create_base_hubspot_payload(customer, customer_address)
+            post_batch_to_hubspot(payload, app_user)
+
+    return 'Ok'
 
 
 @app.route('/bc-ingest-orders', methods=["POST"])
 def bc_ingest_orders():
-    data = json.loads(request.data)
-    orders = get_all_customer_orders(data, app.config, order_list=[])
+    with customer_manager(request.data, app.config) as ctx:
+        client, app_user, customer, customer_address = ctx
 
-    app_user = get_app_user(data)
-    metrics = compute_metrics(orders, app_user)
+        orders = get_all_customer_orders(client, customer.id, order_list=[])
+        metrics = compute_metrics(orders, app_user, customer)
 
-
+        with hubspot_manager(app_user, app.config, metrics):
+            payload = metrics_to_hubspot_payload(metrics, customer, customer_address)
+            post_batch_to_hubspot(payload, app_user)
 
     return 'Ok'
 
 
 @app.route('/bc-ingest-shipments', methods=["POST"])
 def bc_ingest_shipments():
-    return 'request is: {}'.format(request.args)
+    return 'Ok'
 
 
 if __name__ == '__main__':

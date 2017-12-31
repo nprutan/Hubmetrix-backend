@@ -63,7 +63,7 @@ class Metrics(object):
         return pendulum.parse(str(self.dataframe.index[-1])).int_timestamp * 1000
 
     @property
-    def latest_order_date_text(self):
+    def latest_order_timestamp(self):
         return str(pendulum.parse(str(self.dataframe.index[-1].to_pydatetime())))
 
     @property

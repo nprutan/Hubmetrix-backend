@@ -3,18 +3,17 @@ from metrics_computation import *
 from hubmetrix_backend_utils import *
 from hubspot_data import *
 import os
-import json
 
 app = Flask(__name__)
 
 
-app.config['APP_URL'] = os.getenv('APP_URL', 'https://abtggwksuh.execute-api.us-west-1.amazonaws.com')
-app.config['BC_CLIENT_ID'] = os.getenv('BC_CLIENT_ID', '5sdgtpwp82lxz5elfh5c5e2uvjzd07g')
-app.config['BC_CLIENT_SECRET'] = os.getenv('BC_CLIENT_SECRET', 'rua2g02c6t6b6eloudlne400jnmod4z')
+app.config['APP_URL'] = os.environ.get('APP_URL')
+app.config['BC_CLIENT_ID'] = os.environ.get('BC_CLIENT_ID')
+app.config['BC_CLIENT_SECRET'] = os.environ.get('BC_CLIENT_SECRET')
 app.config['SESSION_SECRET'] = os.getenv('SESSION_SECRET', os.urandom(64))
-app.config['HS_REDIRECT_URI'] = 'https://9kr5377xjf.execute-api.us-west-1.amazonaws.com/dev/hsauth'
-app.config['HS_CLIENT_ID'] = 'f0e25e19-d1f3-48fe-93fc-59d744e2326e'
-app.config['HS_CLIENT_SECRET'] = '74c80cfa-9bed-4770-8e31-a581df04a181'
+app.config['HS_REDIRECT_URI'] = os.environ.get('HS_REDIRECT_URI')
+app.config['HS_CLIENT_ID'] = os.environ.get('HS_CLIENT_ID')
+app.config['HS_CLIENT_SECRET'] = os.environ.get('HS_CLIENT_SECRET')
 
 app.secret_key = app.config['SESSION_SECRET']
 

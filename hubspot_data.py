@@ -43,7 +43,7 @@ def post_batch_to_hubspot(payload, user):
 
 def _expand_properties_for_hs_creation(metrics):
     numeric_field_flags = ['total', 'count']
-    datetime_field_flags = ['datetime']
+    datetime_field_flags = ['date']
     count = 0
     data_type = 'string'
     field_type = 'text'
@@ -56,7 +56,7 @@ def _expand_properties_for_hs_creation(metrics):
                 field_type = 'number'
                 break
             if l in datetime_field_flags:
-                data_type = 'datetime'
+                data_type = 'date'
                 field_type = 'date'
                 break
             data_type = 'string'

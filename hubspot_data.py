@@ -5,7 +5,7 @@ import requests
 import json
 
 
-def create_base_hubspot_payload(customer, customer_address):
+def create_base_hubspot_payload(customer, customer_address, lifecyclestage):
     data = json.dumps([
         dict(
             email=customer.email,
@@ -17,7 +17,8 @@ def create_base_hubspot_payload(customer, customer_address):
                 dict(property="address", value=customer_address.street_1 if customer_address else ''),
                 dict(property="city", value=customer_address.city if customer_address else ''),
                 dict(property="state", value=customer_address.state if customer_address else ''),
-                dict(property="zip", value=customer_address.zip if customer_address else '')
+                dict(property="zip", value=customer_address.zip if customer_address else ''),
+                dict(property="lifecyclestage", value=lifecyclestage)
             ]
         )
     ])
@@ -25,7 +26,8 @@ def create_base_hubspot_payload(customer, customer_address):
 
 
 def metrics_to_hubspot_payload(metrics, customer, customer_address):
-    data_json = create_base_hubspot_payload(customer, customer_address)
+    lifecycle = _compute_lifecyclestage(metrics)
+    data_json = create_base_hubspot_payload(customer, customer_address, lifecycle)
     data_json[0]['properties'].extend([*_expand_metrics_properties(metrics)])
     return data_json
 
@@ -33,6 +35,10 @@ def metrics_to_hubspot_payload(metrics, customer, customer_address):
 def _expand_metrics_properties(metrics):
     for p in metrics.__dir__():
         yield dict(property=p, value=str(metrics[p]))
+
+
+def _compute_lifecyclestage(metrics):
+    return 'customer' if metrics.all_time_total_revenue else 'lead'
 
 
 def post_batch_to_hubspot(payload, user):

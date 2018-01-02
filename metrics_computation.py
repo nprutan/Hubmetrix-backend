@@ -43,7 +43,7 @@ class Metrics(object):
         self.dataframe = dataframe
         self.sum_column = sum_column
         self.this_month = '{}-{}'.format(self.now.year, self.now.month)
-        self.last_month = '{}-{}'.format(self.now.year, self.now.subtract(months=1).month)
+        self.last_month = '{}-{}'.format(self.now.subtract(months=1).year, self.now.subtract(months=1).month)
         self.this_year = '{}'.format(self.now.year)
         self.last_year = '{}'.format(self.now.subtract(years=1).year)
         self.monthly_df_sum = self.dataframe.resample('M')[sum_column].sum()
@@ -60,11 +60,11 @@ class Metrics(object):
     # TODO: Fix date type issue -- need datepicker
     @property
     def latest_order_date(self):
-        return pendulum.parse(str(self.dataframe.index[-1])).int_timestamp * 1000
+        return pendulum.parse(str(self.dataframe.index[-1])).with_time_from_string('0').int_timestamp * 1000
 
     @property
     def latest_order_timestamp(self):
-        return str(pendulum.parse(str(self.dataframe.index[-1].to_pydatetime())))
+        return pendulum.parse(str(self.dataframe.index[-1])).to_cookie_string()
 
     @property
     def latest_order_id(self):
@@ -186,7 +186,7 @@ class Metrics(object):
     def __dir__(self):
         return ['all_time_order_count', 'all_time_total_revenue', 'last_month_order_count',
                 'last_month_order_count_percent_change', 'last_month_total', 'last_year_order_count',
-                'last_year_total', 'latest_order_date', 'latest_order_date_text', 'latest_order_id',
+                'last_year_total', 'latest_order_date', 'latest_order_timestamp', 'latest_order_id',
                 'latest_order_status', 'monthly_order_count', 'monthly_total', 'monthly_total_percent_change',
                 'yearly_order_count', 'yearly_order_count_percent_change', 'yearly_percent_change',
                 'yearly_total']

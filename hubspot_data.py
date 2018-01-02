@@ -89,17 +89,18 @@ def _ensure_properties(metrics, user):
     props = [*_expand_properties_for_hs_creation(metrics)]
     return_post_val = None
     for payload in props:
-        return_post_val = requests.post(url, json=payload, headers=headers).text
+        return_post_val = requests.post(url, json=payload, headers=headers)
     return return_post_val
 
 
 def check_for_and_ensure_properties(metrics, user):
     if not user.hs_properties_exist:
-        _ensure_property_group(user)
-        _ensure_properties(metrics, user)
-        user.update(actions=[
-            AppUser.hs_properties_exist.set(True)]
-        )
+        group = _ensure_property_group(user)
+        props = _ensure_properties(metrics, user)
+        if group.status_code is 200 and props.status_code is 200:
+            user.update(actions=[
+                AppUser.hs_properties_exist.set(True)]
+            )
 
 
 def check_token_expiration(user, config):

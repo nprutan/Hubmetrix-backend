@@ -2,11 +2,12 @@ from bigcommerce.api import BigcommerceApi
 from dynamodb_utils import *
 from contextlib import contextmanager
 from hubspot_data import check_token_expiration, check_for_and_ensure_properties
+import pendulum
 import json
 
 
 @contextmanager
-def customer_manager(data, config):
+def bc_customer_manager(data, config):
     data = json.loads(data)
     app_user = get_app_user(data)
     client = get_bc_client(app_user, config)
@@ -16,10 +17,19 @@ def customer_manager(data, config):
 
 
 @contextmanager
-def hubspot_manager(user, config, metrics):
+def hubspot_housekeeping_manager(user, config, metrics):
     check_token_expiration(user, config)
     check_for_and_ensure_properties(metrics, user)
     yield
+
+
+def hubmetrix_last_sync_timestamp(func):
+    def wrapper(payload, user):
+        func(payload, user)
+        user.update(actions=[
+            AppUser.hm_last_sync_timestamp.set(pendulum.now().to_cookie_string())]
+        )
+    return wrapper
 
 
 def get_bc_store_hash(data):

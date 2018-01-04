@@ -1,11 +1,12 @@
 from dynamodb_utils import *
 from datetime import datetime
+from hubmetrix_backend_utils import hubmetrix_last_sync_timestamp
 import pendulum
 import requests
 import json
 
 
-def create_base_hubspot_payload(customer, customer_address, lifecyclestage):
+def create_base_hubspot_payload(metrics, customer, customer_address):
     data = json.dumps([
         dict(
             email=customer.email,
@@ -18,7 +19,7 @@ def create_base_hubspot_payload(customer, customer_address, lifecyclestage):
                 dict(property="city", value=customer_address.city if customer_address else ''),
                 dict(property="state", value=customer_address.state if customer_address else ''),
                 dict(property="zip", value=customer_address.zip if customer_address else ''),
-                dict(property="lifecyclestage", value=lifecyclestage)
+                dict(property="lifecyclestage", value=_compute_lifecyclestage(metrics))
             ]
         )
     ])
@@ -26,8 +27,7 @@ def create_base_hubspot_payload(customer, customer_address, lifecyclestage):
 
 
 def metrics_to_hubspot_payload(metrics, customer, customer_address):
-    lifecycle = _compute_lifecyclestage(metrics)
-    data_json = create_base_hubspot_payload(customer, customer_address, lifecycle)
+    data_json = create_base_hubspot_payload(metrics, customer, customer_address)
     data_json[0]['properties'].extend([*_expand_metrics_properties(metrics)])
     return data_json
 
@@ -41,6 +41,7 @@ def _compute_lifecyclestage(metrics):
     return 'customer' if metrics.all_time_total_revenue else 'lead'
 
 
+@hubmetrix_last_sync_timestamp
 def post_batch_to_hubspot(payload, user):
     url = 'https://api.hubapi.com/contacts/v1/contact/batch'
     headers = {'Authorization': 'Bearer {}'.format(user.hs_access_token)}

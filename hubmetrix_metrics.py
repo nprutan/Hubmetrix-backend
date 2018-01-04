@@ -7,11 +7,12 @@ import os
 app = Flask(__name__)
 
 
+app.config['STAGE'] = 'dev' if os.environ.get('STAGE') is 'dev' else ''
 app.config['APP_URL'] = os.environ.get('APP_URL')
 app.config['BC_CLIENT_ID'] = os.environ.get('BC_CLIENT_ID')
 app.config['BC_CLIENT_SECRET'] = os.environ.get('BC_CLIENT_SECRET')
 app.config['SESSION_SECRET'] = os.getenv('SESSION_SECRET', os.urandom(64))
-app.config['HS_REDIRECT_URI'] = os.environ.get('HS_REDIRECT_URI')
+app.config['HS_REDIRECT_URI'] = os.environ.get('APP_URL') + app.config['STAGE'] + '/hs_auth_callback'
 app.config['HS_CLIENT_ID'] = os.environ.get('HS_CLIENT_ID')
 app.config['HS_CLIENT_SECRET'] = os.environ.get('HS_CLIENT_SECRET')
 
@@ -50,13 +51,13 @@ def index():
 
 @app.route('/bc-ingest-customers', methods=["POST"])
 def bc_ingest_customers():
-    with customer_manager(request.data, app.config) as ctx:
+    with bc_customer_manager(request.data, app.config) as ctx:
         client, app_user, customer, customer_address = ctx
 
         metrics_empty = compute_metrics([], app_user, customer)
 
-        with hubspot_manager(app_user, app.config, metrics_empty):
-            payload = create_base_hubspot_payload(customer, customer_address)
+        with hubspot_housekeeping_manager(app_user, app.config, metrics_empty):
+            payload = create_base_hubspot_payload(metrics_empty, customer, customer_address)
             post_batch_to_hubspot(payload, app_user)
 
     return 'Ok'
@@ -64,13 +65,13 @@ def bc_ingest_customers():
 
 @app.route('/bc-ingest-orders', methods=["POST"])
 def bc_ingest_orders():
-    with customer_manager(request.data, app.config) as ctx:
+    with bc_customer_manager(request.data, app.config) as ctx:
         client, app_user, customer, customer_address = ctx
 
         orders = get_all_customer_orders(client, customer.id, order_list=[])
         metrics = compute_metrics(orders, app_user, customer)
 
-        with hubspot_manager(app_user, app.config, metrics):
+        with hubspot_housekeeping_manager(app_user, app.config, metrics):
             payload = metrics_to_hubspot_payload(metrics, customer, customer_address)
             post_batch_to_hubspot(payload, app_user)
 

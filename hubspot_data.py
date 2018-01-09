@@ -1,9 +1,17 @@
+from contextlib import contextmanager
 from dynamodb_utils import *
 from datetime import datetime
 from hubmetrix_backend_utils import hubmetrix_last_sync_timestamp
 import pendulum
 import requests
 import json
+
+
+@contextmanager
+def hubspot_housekeeping_manager(user, config, metrics):
+    check_token_expiration(user, config)
+    check_for_and_ensure_properties(metrics, user)
+    yield
 
 
 def create_base_hubspot_payload(metrics, customer, customer_address):
@@ -97,6 +105,8 @@ def _ensure_properties(metrics, user):
     return_post_val = None
     for payload in props:
         return_post_val = requests.post(url, json=payload, headers=headers)
+        if return_post_val.status_code == 409:
+            break
     return return_post_val
 
 
@@ -104,7 +114,8 @@ def check_for_and_ensure_properties(metrics, user):
     if not user.hs_properties_exist:
         group = _ensure_property_group(user)
         props = _ensure_properties(metrics, user)
-        if group.status_code is 200 and props.status_code is 200:
+        allowed_codes = [200, 409]
+        if group.status_code in allowed_codes and props.status_code in allowed_codes:
             user.update(actions=[
                 AppUser.hs_properties_exist.set(True)]
             )

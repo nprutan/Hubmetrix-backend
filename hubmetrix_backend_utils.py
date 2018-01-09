@@ -1,7 +1,6 @@
 from bigcommerce.api import BigcommerceApi
 from dynamodb_utils import *
 from contextlib import contextmanager
-from hubspot_data import check_token_expiration, check_for_and_ensure_properties
 import pendulum
 import json
 
@@ -14,13 +13,6 @@ def bc_customer_manager(data, config):
     customer = get_bc_customer(client, data)
     customer_address = get_bc_customer_address(customer)
     yield (client, app_user, customer, customer_address)
-
-
-@contextmanager
-def hubspot_housekeeping_manager(user, config, metrics):
-    check_token_expiration(user, config)
-    check_for_and_ensure_properties(metrics, user)
-    yield
 
 
 def hubmetrix_last_sync_timestamp(func):
@@ -57,10 +49,12 @@ def get_bc_customer(client, data):
 
 
 def get_bc_customer_address(customer):
-    try:
-        customer.addresses()[0]
-    except KeyError:
-        return None
+    address = customer.addresses(customer.id)
+    if hasattr(address, 'id'):
+        return address
+    else:
+        if hasattr(address, 'append'):
+            return address[0]
 
 
 def get_customer_id_from_webhook(client, data):

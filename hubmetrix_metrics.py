@@ -7,12 +7,12 @@ import os
 app = Flask(__name__)
 
 
-app.config['STAGE'] = 'dev' if os.environ.get('STAGE') is 'dev' else ''
-app.config['APP_URL'] = os.environ.get('APP_URL')
+app.config['STAGE-PREFIX'] = os.environ.get('STAGE-PREFIX')
+app.config['APP_URL'] = os.environ.get('APP_URL', 'http://localhost')
 app.config['BC_CLIENT_ID'] = os.environ.get('BC_CLIENT_ID')
 app.config['BC_CLIENT_SECRET'] = os.environ.get('BC_CLIENT_SECRET')
 app.config['SESSION_SECRET'] = os.getenv('SESSION_SECRET', os.urandom(64))
-app.config['HS_REDIRECT_URI'] = os.environ.get('APP_URL') + app.config['STAGE'] + '/hs_auth_callback'
+app.config['HS_REDIRECT_URI'] = os.environ.get('HS_REDIRECT_URI')
 app.config['HS_CLIENT_ID'] = os.environ.get('HS_CLIENT_ID')
 app.config['HS_CLIENT_SECRET'] = os.environ.get('HS_CLIENT_SECRET')
 

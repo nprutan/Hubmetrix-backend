@@ -49,7 +49,7 @@ def get_bc_customer(client, data):
 
 
 def get_bc_customer_address(customer):
-    address = customer.addresses(customer.id)
+    address = customer.addresses()
     if hasattr(address, 'id'):
         return address
     else:

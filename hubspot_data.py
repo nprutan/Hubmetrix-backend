@@ -123,7 +123,7 @@ def check_for_and_ensure_properties(metrics, user):
 
 def check_token_expiration(user, config):
     delta = datetime.now() - pendulum.parse(user.hs_access_token_timestamp)
-    if abs(delta.seconds) > int(user.hs_expires_in):
+    if delta.in_seconds() > int(user.hs_expires_in):
         tokens = get_new_tokens(user, config)
         cache_tokens(tokens, user)
 

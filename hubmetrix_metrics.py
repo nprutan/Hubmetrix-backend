@@ -54,11 +54,12 @@ def bc_ingest_customers():
     with bc_customer_manager(request.data, app.config) as ctx:
         client, app_user, customer, customer_address = ctx
 
-        metrics_empty = compute_metrics([], app_user, customer)
+        if customer:
+            metrics_empty = compute_metrics([], app_user, customer)
 
-        with hubspot_housekeeping_manager(app_user, app.config, metrics_empty):
-            payload = create_base_hubspot_payload(metrics_empty, customer, customer_address)
-            post_batch_to_hubspot(payload, app_user)
+            with hubspot_housekeeping_manager(app_user, app.config, metrics_empty):
+                payload = create_base_hubspot_payload(metrics_empty, customer, customer_address)
+                post_batch_to_hubspot(payload, app_user)
 
     return 'Ok'
 
@@ -68,12 +69,13 @@ def bc_ingest_orders():
     with bc_customer_manager(request.data, app.config) as ctx:
         client, app_user, customer, customer_address = ctx
 
-        orders = get_all_customer_orders(client, customer.id, order_list=[])
-        metrics = compute_metrics(orders, app_user, customer)
+        if customer:
+            orders = get_all_customer_orders(client, customer.id, order_list=[])
+            metrics = compute_metrics(orders, app_user, customer)
 
-        with hubspot_housekeeping_manager(app_user, app.config, metrics):
-            payload = metrics_to_hubspot_payload(metrics, customer, customer_address)
-            post_batch_to_hubspot(payload, app_user)
+            with hubspot_housekeeping_manager(app_user, app.config, metrics):
+                payload = metrics_to_hubspot_payload(metrics, customer, customer_address)
+                post_batch_to_hubspot(payload, app_user)
 
     return 'Ok'
 

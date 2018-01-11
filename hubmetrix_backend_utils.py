@@ -43,18 +43,30 @@ def get_bc_client(user, config):
     return bc_client
 
 
-def get_bc_customer(client, data):
-    customer_id = get_customer_id_from_webhook(client, data)
+def filter_customer(filtered_id):
+    def filter_deco(func):
+        def wrapper(client, data):
+            customer_id = get_customer_id_from_webhook(client, data)
+            if customer_id is not filtered_id:
+                return func(client, customer_id)
+        return wrapper
+    return filter_deco
+
+
+@filter_customer(filtered_id=0)
+def get_bc_customer(client, customer_id):
     return client.Customers.get(customer_id)
 
 
 def get_bc_customer_address(customer):
-    address = customer.addresses()
-    if hasattr(address, 'id'):
-        return address
-    else:
-        if hasattr(address, 'append'):
-            return address[0]
+    if customer:
+        address = customer.addresses()
+        if hasattr(address, 'id'):
+            return address
+        else:
+            if hasattr(address, 'append'):
+                return address[0]
+    return None
 
 
 def get_customer_id_from_webhook(client, data):

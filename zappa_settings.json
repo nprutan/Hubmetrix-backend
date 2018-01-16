@@ -9,6 +9,7 @@
 	    "use_precompiled_packages": true,
 	    "slim_handler": true,
         "environment_variables": {
+            "SESSION_SECRET": "335e1ba54aea9fe117ca764c3cd96c06913da5c13c1ad9911ff99fb5c77474ad",
             "APP_URL": "https://up5sepzms9.execute-api.us-west-1.amazonaws.com",
             "BC_CLIENT_ID": "5sdgtpwp82lxz5elfh5c5e2uvjzd07g",
             "BC_CLIENT_SECRET": "rua2g02c6t6b6eloudlne400jnmod4z",

@@ -1,10 +1,14 @@
+import json
 from contextlib import contextmanager
-from dynamodb_utils import *
 from datetime import datetime
-from hubmetrix_backend_utils import hubmetrix_last_sync_timestamp
+from uuid import uuid4
+from enum import Enum
+
 import pendulum
 import requests
-import json
+
+from dynamodb_utils import *
+from hubmetrix_backend_utils import hubmetrix_last_sync_timestamp
 
 
 @contextmanager
@@ -49,11 +53,57 @@ def _compute_lifecyclestage(metrics):
     return 'customer' if metrics.all_time_total_revenue else 'lead'
 
 
+class TimelineEventType(Enum):
+    OrderCreated = 23175
+    OrderStatusChanged = 23176
+
+
+def base_timeline_event(func):
+    def wrapper(**kwargs):
+        payload = {
+            'id': str(uuid4().int),
+            'eventTypeId': str(kwargs['event_type'].value),
+            'email': kwargs['email']
+        }
+        del kwargs['event_type']
+        payload.update(func(**kwargs))
+        return payload
+    return wrapper
+
+
+@base_timeline_event
+def create_timeline_event_payload(**template_vars):
+    return dict(template_vars)
+
+
+def create_order_created_timeline_event(orders):
+    sorted_orders = sorted(orders, key=lambda x: x.id)
+    customer_email = sorted_orders[-1].billing_address['email']
+    latest_order_source = sorted_orders[-1].order_source
+    latest_order_id = sorted_orders[-1].id
+    latest_order_date = pendulum.parse(str(sorted_orders[-1].date_created)).with_time_from_string('0').int_timestamp * 1000
+    return create_timeline_event_payload(
+        orderDate=str(latest_order_date),
+        orderSource=latest_order_source,
+        orderId=str(latest_order_id),
+        email=customer_email,
+        timestamp=latest_order_date,
+        event_type=TimelineEventType.OrderCreated
+    )
+
+
 @hubmetrix_last_sync_timestamp
 def post_batch_to_hubspot(payload, user):
     url = 'https://api.hubapi.com/contacts/v1/contact/batch'
     headers = {'Authorization': 'Bearer {}'.format(user.hs_access_token)}
     return requests.post(url, json=payload, headers=headers)
+
+
+def put_timeline_event_to_hubspot(payload, user):
+    url = 'https://api.hubapi.com/integrations/v1/{}/timeline/event'.format(user.hs_app_id)
+    headers = {'Authorization': 'Bearer {}'.format(user.hs_access_token),
+               'Content Type': 'application/json'}
+    return requests.put(url, json=payload, headers=headers)
 
 
 def _expand_properties_for_hs_creation(metrics):

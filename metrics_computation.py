@@ -57,7 +57,6 @@ class Metrics(object):
         self.all_time_df_total = self.dataframe[sum_column].sum()
         self.all_time_df_count = self.dataframe[sum_column].count()
 
-    # TODO: Fix date type issue -- need datepicker
     @property
     def latest_order_date(self):
         return pendulum.parse(str(self.dataframe.index[-1])).with_time_from_string('0').int_timestamp * 1000

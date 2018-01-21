@@ -1,6 +1,7 @@
 import json
 from contextlib import contextmanager
 from datetime import datetime
+from hashlib import sha256
 from uuid import uuid4
 from enum import Enum
 
@@ -54,14 +55,14 @@ def _compute_lifecyclestage(metrics):
 
 
 class TimelineEventType(Enum):
-    OrderCreated = 23175
-    OrderStatusChanged = 23176
+    OrderCreated = 23271
+    OrderStatusChanged = 23272
 
 
 def base_timeline_event(func):
     def wrapper(**kwargs):
         payload = {
-            'id': str(uuid4().int),
+            'id': uuid4().hex,
             'eventTypeId': str(kwargs['event_type'].value),
             'email': kwargs['email']
         }
@@ -76,19 +77,49 @@ def create_timeline_event_payload(**template_vars):
     return dict(template_vars)
 
 
-def create_order_created_timeline_event(orders):
-    sorted_orders = sorted(orders, key=lambda x: x.id)
+def filter_allowed_webhook(status):
+    def filter_deco(func):
+        def wrapper(orders, webhook_data):
+            if status in str.lower(webhook_data['scope']):
+                return func(orders=orders, webhook_data=webhook_data)
+        return wrapper
+    return filter_deco
+
+
+@filter_allowed_webhook('created')
+def make_order_created_timeline_event(**kwargs):
+    sorted_orders = sorted(kwargs.get('orders'), key=lambda x: x.id)
     customer_email = sorted_orders[-1].billing_address['email']
     latest_order_source = sorted_orders[-1].order_source
     latest_order_id = sorted_orders[-1].id
-    latest_order_date = pendulum.parse(str(sorted_orders[-1].date_created)).with_time_from_string('0').int_timestamp * 1000
+    latest_order_date = pendulum.parse(str(sorted_orders[-1].date_created)).to_cookie_string()
+    latest_order_date_timestamp = (pendulum.parse(str(sorted_orders[-1].date_created)).int_timestamp * 1000)
     return create_timeline_event_payload(
         orderDate=str(latest_order_date),
         orderSource=latest_order_source,
         orderId=str(latest_order_id),
         email=customer_email,
-        timestamp=latest_order_date,
-        event_type=TimelineEventType.OrderCreated
+        timestamp=latest_order_date_timestamp,
+        event_type=TimelineEventType.OrderCreated,
+        deduplication_id=sha256(bytes(str(latest_order_id)+latest_order_source+str(latest_order_date_timestamp)))
+    )
+
+
+@filter_allowed_webhook('updated')
+def make_order_status_timeline_event(**kwargs):
+    sorted_orders = sorted(kwargs.get('orders'), key=lambda x: x.id)
+    customer_email = sorted_orders[-1].billing_address['email']
+    latest_order_status = sorted_orders[-1].status
+    latest_order_id = sorted_orders[-1].id
+    latest_status_timestamp = pendulum.fromtimestamp(kwargs.get('webhook_data')['created_at']).int_timestamp * 1000
+    latest_order_date_timestamp = (pendulum.parse(str(sorted_orders[-1].date_created)).int_timestamp * 1000)
+    return create_timeline_event_payload(
+        orderStatus=latest_order_status,
+        orderId=latest_order_id,
+        email=customer_email,
+        timestamp=latest_status_timestamp,
+        event_type=TimelineEventType.OrderStatusChanged,
+        deduplication_id=sha256(bytes(str(latest_order_id)+latest_order_status+str(latest_order_date_timestamp)))
     )
 
 
@@ -100,10 +131,17 @@ def post_batch_to_hubspot(payload, user):
 
 
 def put_timeline_event_to_hubspot(payload, user):
-    url = 'https://api.hubapi.com/integrations/v1/{}/timeline/event'.format(user.hs_app_id)
-    headers = {'Authorization': 'Bearer {}'.format(user.hs_access_token),
-               'Content Type': 'application/json'}
-    return requests.put(url, json=payload, headers=headers)
+    if payload:
+        url = 'https://api.hubapi.com/integrations/v1/{}/timeline/event'.format(user.hs_app_id)
+        headers = {'Authorization': 'Bearer {}'.format(user.hs_access_token),
+                   'Content Type': 'application/json'}
+        return requests.put(url, json=payload, headers=headers)
+
+
+def put_timeline_events_to_hubspot(payload_iterable, user):
+    if payload_iterable:
+        for payload in payload_iterable:
+            put_timeline_event_to_hubspot(payload, user)
 
 
 def _expand_properties_for_hs_creation(metrics):
@@ -150,7 +188,7 @@ def _ensure_property_group(user):
 def _ensure_properties(metrics, user):
     url = 'https://api.hubapi.com/properties/v1/contacts/properties'
     headers = {'Authorization': 'Bearer {}'.format(user.hs_access_token),
-               'Content Type' : 'application/json'}
+               'Content Type': 'application/json'}
     props = [*_expand_properties_for_hs_creation(metrics)]
     return_post_val = None
     for payload in props:
@@ -186,7 +224,7 @@ def get_new_tokens(user, config):
         config['HS_CLIENT_SECRET'],
         config['HS_REDIRECT_URI'],
         user.hs_refresh_token
-        )
+    )
     return requests.post(url, data=payload, headers=headers).json()
 
 

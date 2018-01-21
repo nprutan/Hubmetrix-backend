@@ -1,8 +1,32 @@
-from bigcommerce.api import BigcommerceApi
-from dynamodb_utils import *
-from contextlib import contextmanager
-import pendulum
 import json
+from contextlib import contextmanager
+from uuid import uuid4
+
+import pendulum
+import boto3
+from bigcommerce.api import BigcommerceApi
+from enum import Enum
+
+from dynamodb_utils import *
+
+
+class SQSGroupId(Enum):
+    OrderCreated = 'order_created'
+    OrderStatusUpdated = 'order_status_updated'
+    CustomerUpdated = 'customer_updated'
+
+
+def create_sqs_message(group_id, payload):
+    return dict(
+        Id=uuid4().hex,
+        MessageBody=json.dumps(payload),
+        MessageDeduplicationId=payload['deduplication_id'],
+        MessageGroupId=group_id
+    )
+
+
+def send_queue_messages(queue, *args):
+    queue.send_messages(Entries=[*args])
 
 
 @contextmanager
@@ -12,7 +36,7 @@ def bc_customer_manager(data, config):
     client = get_bc_client(app_user, config)
     customer = get_bc_customer(client, data)
     customer_address = get_bc_customer_address(customer)
-    yield (client, app_user, customer, customer_address)
+    yield (client, app_user, customer, customer_address, data)
 
 
 def hubmetrix_last_sync_timestamp(func):

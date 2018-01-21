@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, redirect, url_for
 from metrics_computation import *
 from hubmetrix_backend_utils import *
 from hubspot_data import *
@@ -52,7 +52,7 @@ def index():
 @app.route('/bc-ingest-customers', methods=["POST"])
 def bc_ingest_customers():
     with bc_customer_manager(request.data, app.config) as ctx:
-        client, app_user, customer, customer_address = ctx
+        client, app_user, customer, customer_address, webhook_data = ctx
 
         if customer:
             metrics_empty = compute_metrics([], app_user, customer)
@@ -67,17 +67,33 @@ def bc_ingest_customers():
 @app.route('/bc-ingest-orders', methods=["POST"])
 def bc_ingest_orders():
     with bc_customer_manager(request.data, app.config) as ctx:
-        client, app_user, customer, customer_address = ctx
+        client, app_user, customer, customer_address, webhook_data = ctx
 
         if customer:
             orders = get_all_customer_orders(client, customer.id, order_list=[])
             metrics = compute_metrics(orders, app_user, customer)
 
+            # TODO: need to redirect here with post data
+            # TODO: to message handler
+
             with hubspot_housekeeping_manager(app_user, app.config, metrics):
-                payload = metrics_to_hubspot_payload(metrics, customer, customer_address)
-                post_batch_to_hubspot(payload, app_user)
+
+                # TODO: before posting payload to hubspot
+                # TODO: strip the deduplication_id attr off the
+                # TODO: timeline payload
+                metrics_payload = metrics_to_hubspot_payload(metrics, customer, customer_address)
+                post_batch_to_hubspot(metrics_payload, app_user)
+
+                order_created_payload = make_order_created_timeline_event(orders, webhook_data)
+                order_status_payload = make_order_status_timeline_event(orders, webhook_data)
+                put_timeline_events_to_hubspot([order_created_payload, order_status_payload], app_user)
 
     return 'Ok'
+
+
+@app.route('/sqs-message-handler', methods=["POST"])
+def sqs_message_handler():
+    pass
 
 
 @app.route('/bc-ingest-shipments', methods=["POST"])

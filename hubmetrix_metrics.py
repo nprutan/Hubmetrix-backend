@@ -1,4 +1,4 @@
-from flask import Flask, request, redirect, url_for
+from flask import Flask, request, redirect, url_for, make_response
 from metrics_computation import *
 from hubmetrix_backend_utils import *
 from hubspot_data import *
@@ -76,6 +76,9 @@ def bc_ingest_orders():
             # TODO: need to redirect here with post data
             # TODO: to message handler
 
+            response = make_response(redirect(url_for('sqs_message_handler'), 307))
+            response.set_data(json.dumps(dict(raw_request_data=request.data)))
+
             with hubspot_housekeeping_manager(app_user, app.config, metrics):
 
                 # TODO: before posting payload to hubspot
@@ -93,7 +96,8 @@ def bc_ingest_orders():
 
 @app.route('/sqs-message-handler', methods=["POST"])
 def sqs_message_handler():
-    pass
+    with bc_customer_manager(request.data, app.config) as ctx:
+        client, app_user, customer, customer_address, webhook_data = ctx
 
 
 @app.route('/bc-ingest-shipments', methods=["POST"])

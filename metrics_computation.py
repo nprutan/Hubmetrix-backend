@@ -195,4 +195,4 @@ class Metrics(object):
 
     def __repr__(self):
         return ('Metrics({!r}, {!r}, dataframe_id: {}, {!r})'.format(self.hub_id, self.email, id(self.dataframe),
-                                                                                                self.sum_column))
+                                                                     self.sum_column))

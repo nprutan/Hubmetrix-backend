@@ -4,6 +4,7 @@ from datetime import datetime
 from hashlib import sha256
 from uuid import uuid4
 from enum import Enum
+from time import sleep
 
 import pendulum
 import requests
@@ -101,7 +102,7 @@ def make_order_created_timeline_event(**kwargs):
         email=customer_email,
         timestamp=latest_order_date_timestamp,
         event_type=TimelineEventType.OrderCreated,
-        deduplication_id=sha256(bytes(str(latest_order_id)+latest_order_source+str(latest_order_date_timestamp)))
+        id=sha256(bytes(str(latest_order_id)+latest_order_source+str(latest_order_date_timestamp), 'utf-8')).hexdigest()
     )
 
 
@@ -119,17 +120,28 @@ def make_order_status_timeline_event(**kwargs):
         email=customer_email,
         timestamp=latest_status_timestamp,
         event_type=TimelineEventType.OrderStatusChanged,
-        deduplication_id=sha256(bytes(str(latest_order_id)+latest_order_status+str(latest_order_date_timestamp)))
+        id=sha256(bytes(str(latest_order_id)+latest_order_status+str(latest_order_date_timestamp), 'utf-8')).hexdigest()
     )
 
 
+def hubspot_api_delay(delay_in_ms):
+    def deco(func):
+        def wrapper(*args, **kwargs):
+            sleep(delay_in_ms)
+            return func(*args, **kwargs)
+        return wrapper
+    return deco
+
+
 @hubmetrix_last_sync_timestamp
+@hubspot_api_delay(0.250)
 def post_batch_to_hubspot(payload, user):
     url = 'https://api.hubapi.com/contacts/v1/contact/batch'
     headers = {'Authorization': 'Bearer {}'.format(user.hs_access_token)}
     return requests.post(url, json=payload, headers=headers)
 
 
+@hubspot_api_delay(0.250)
 def put_timeline_event_to_hubspot(payload, user):
     if payload:
         url = 'https://api.hubapi.com/integrations/v1/{}/timeline/event'.format(user.hs_app_id)

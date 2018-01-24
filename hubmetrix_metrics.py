@@ -1,8 +1,10 @@
-from flask import Flask, request, redirect, url_for, make_response
-from metrics_computation import *
+import os
+
+from flask import Flask, request
+
 from hubmetrix_backend_utils import *
 from hubspot_data import *
-import os
+from metrics_computation import *
 
 app = Flask(__name__)
 
@@ -73,17 +75,8 @@ def bc_ingest_orders():
             orders = get_all_customer_orders(client, customer.id, order_list=[])
             metrics = compute_metrics(orders, app_user, customer)
 
-            # TODO: need to redirect here with post data
-            # TODO: to message handler
-
-            response = make_response(redirect(url_for('sqs_message_handler'), 307))
-            response.set_data(json.dumps(dict(raw_request_data=request.data)))
-
             with hubspot_housekeeping_manager(app_user, app.config, metrics):
 
-                # TODO: before posting payload to hubspot
-                # TODO: strip the deduplication_id attr off the
-                # TODO: timeline payload
                 metrics_payload = metrics_to_hubspot_payload(metrics, customer, customer_address)
                 post_batch_to_hubspot(metrics_payload, app_user)
 
@@ -94,16 +87,6 @@ def bc_ingest_orders():
     return 'Ok'
 
 
-@app.route('/sqs-message-handler', methods=["POST"])
-def sqs_message_handler():
-    with bc_customer_manager(request.data, app.config) as ctx:
-        client, app_user, customer, customer_address, webhook_data = ctx
-
-
 @app.route('/bc-ingest-shipments', methods=["POST"])
 def bc_ingest_shipments():
     return 'Ok'
-
-
-if __name__ == '__main__':
-    app.run('0.0.0.0', debug=True, port=8100)

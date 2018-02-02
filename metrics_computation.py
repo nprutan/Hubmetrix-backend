@@ -11,6 +11,19 @@ def _get_date_index(itrable):
     return pd.to_datetime(itrable)
 
 
+def filter_order_status(status):
+    def filter_deco(func):
+        def wrapper(itrable):
+            itrable = list(itrable)
+            for o in itrable:
+                if o.status == status:
+                    itrable.remove(o)
+            return func(itrable)
+        return wrapper
+    return filter_deco
+
+
+@filter_order_status('Cancelled')
 def _get_dataframe(itrable):
     dates = _extract_dates(itrable, 'date_created')
     idx = _get_date_index(dates)
@@ -26,7 +39,7 @@ def _get_dataframe(itrable):
 def compute_metrics(order_iter, app_user, customer):
     df = _get_dataframe(order_iter)
     sum_col = 'total_inc_tax'
-    metrics = Metrics(app_user.hs_hub_id, customer.email, dataframe=df, sum_column=sum_col)
+    metrics = Metrics(app_user.hs_hub_id, customer.email, dataframe=df, sum_column=sum_col, order_iter=order_iter)
 
     return metrics
 
@@ -36,10 +49,11 @@ class Metrics(object):
     Ecommerce metrics for pushing to HubSpot.
     """
 
-    def __init__(self, hub_id, email, dataframe, sum_column=None):
+    def __init__(self, hub_id, email, dataframe=None, sum_column=None, order_iter=None):
         self.hub_id = hub_id
         self.email = email
         self.now = pendulum.now()
+        self.order_iter = order_iter
         self.dataframe = dataframe
         self.sum_column = sum_column
         self.this_month = '{}-{}'.format(self.now.year, self.now.month)
@@ -59,19 +73,19 @@ class Metrics(object):
 
     @property
     def latest_order_date(self):
-        return pendulum.parse(str(self.dataframe.index[-1])).with_time_from_string('0').int_timestamp * 1000
+        return pendulum.parse(str(self.order_iter[-1].date_created)).with_time_from_string('0').int_timestamp * 1000
 
     @property
     def latest_order_timestamp(self):
-        return pendulum.parse(str(self.dataframe.index[-1])).to_cookie_string()
+        return pendulum.parse(str(self.order_iter[-1].date_created)).to_cookie_string()
 
     @property
     def latest_order_id(self):
-        return self.dataframe.id[-1]
+        return self.order_iter[-1].id
 
     @property
     def latest_order_status(self):
-        return self.dataframe.status[-1]
+        return self.order_iter[-1].status
 
     @property
     def monthly_total(self):

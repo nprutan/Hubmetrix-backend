@@ -14,11 +14,7 @@ def _get_date_index(itrable):
 def filter_order_status(status):
     def filter_deco(func):
         def wrapper(itrable):
-            itrable = list(itrable)
-            for o in itrable:
-                if o.status == status:
-                    itrable.remove(o)
-            return func(itrable)
+            return func([o for o in itrable if o.status != status])
         return wrapper
     return filter_deco
 
